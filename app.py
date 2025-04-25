@@ -19,8 +19,16 @@ from simpleeval import SimpleEval
 import cv2
 import numpy as np
 import base64
+import urllib
 
 import posedetector
+
+from ha_mqtt_discoverable import Settings, DeviceInfo
+from ha_mqtt_discoverable.sensors import BinarySensor, BinarySensorInfo
+from slugify import slugify
+
+def configured_slugify(input):
+    return slugify(input, separator='_')
 
 # Fire up the landmarker and event emitter.
 event_emitter = EventEmitter()
@@ -72,24 +80,34 @@ async def websocket_endpoint(websocket: WebSocket):
 rules = [
     {
         'name': 'Left Arm Up',
-        'expression': "(left_arm_whole_angle < -150 and right_arm_whole_octant > -150)",
-        'event': 'pause'
+        'expression': "(left_arm_whole_angle < -150 and right_arm_whole_octant > -150)"
     },
     {
         'name': 'Right Arm Up',
-        'expression': "(right_arm_whole_angle < -150 and left_arm_whole_octant > -150)",
-        'event': 'resume'
+        'expression': "(right_arm_whole_angle < -150 and left_arm_whole_octant > -150)"
     },
 ]
+
+mqtt_parsed = urllib.parse.urlparse(os.getenv("HA_MQTT"))
+mqtt_settings = Settings.MQTT(host=mqtt_parsed.hostname, port=mqtt_parsed.port, username=mqtt_parsed.username, password=mqtt_parsed.password)
+HA_DEVICE_NAME = os.getenv("HA_DEVICE_NAME")
+ha_device_info = DeviceInfo(name=HA_DEVICE_NAME, identifiers=configured_slugify(HA_DEVICE_NAME))
 
 evaluator = SimpleEval()
 parsed_rules = {}
 for rule in rules:
     key = rule['name']
     parsed = evaluator.parse(rule['expression'])
+
+    motion_sensor_info = BinarySensorInfo(name=rule['name'], device_class='motion', unique_id=configured_slugify(rule['name']), device=ha_device_info)
+    motion_settings = Settings(mqtt=mqtt_settings, entity=motion_sensor_info)
+    motion_sensor = BinarySensor(motion_settings)
+
     parsed_rules[key] = {
         'parsed': parsed,
-        'expression': rule['expression']
+        'expression': rule['expression'],
+        'ha_sensor': motion_sensor,
+        'last_value': None
     }
 
 @event_emitter.on('pose_result')
@@ -100,5 +118,18 @@ def lm_result(meta):
             rule_data = parsed_rules[rule_name]
             evaluator.names = person
             result = evaluator.eval(rule_data['expression'], previously_parsed=rule_data['parsed'])
-            if result:
-                print("Expression", rule_name, "(", rule_data['expression'], ")", "matched.")
+
+            def publish_result():
+                if result:
+                    print("Expression", rule_name, "(", rule_data['expression'], ")", "matched.")
+                    rule_data['ha_sensor'].on()
+                else:
+                    rule_data['ha_sensor'].off()
+                rule_data['last_value'] = result
+
+            if rule_data['last_value'] is None:
+                # First time it's been seen. Always publish it.
+                publish_result()
+            elif rule_data['last_value'] != result:
+                publish_result()
+
