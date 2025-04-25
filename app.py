@@ -71,19 +71,14 @@ async def websocket_endpoint(websocket: WebSocket):
 # Evaluate the result against the rules.
 rules = [
     {
-        'name': 'Semaphore E',
-        'expression': "semaphore_letter == 'E'",
+        'name': 'Left Arm Up',
+        'expression': "(left_arm_whole_angle < -150 and right_arm_whole_octant > -150)",
         'event': 'pause'
     },
     {
-        'name': 'Both arms up',
-        'expression': "left_pose_octant == 0 and right_pose_octant == 0",
-        'event': 'pause'
-    },
-    {
-        'name': 'Both arms up (close enough)',
-        'expression': "(left_pose_octant == 0 and right_pose_octant == 1) or (left_pose_octant == 0 and right_pose_octant == 1)",
-        'event': 'pause'
+        'name': 'Right Arm Up',
+        'expression': "(right_arm_whole_angle < -150 and left_arm_whole_octant > -150)",
+        'event': 'resume'
     },
 ]
 

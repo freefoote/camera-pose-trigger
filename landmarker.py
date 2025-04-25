@@ -44,6 +44,14 @@ semaphore_flag = {
     (1,6):'Y', (5,6):'Z'
 }
 
+# Ref: https://github.com/geaxgx/openvino_blazepose/blob/main/BlazeposeOpenvino.py#L61
+# Also https://github.com/geaxgx/openvino_blazepose/blob/main/BlazeposeOpenvino.py#L417
+def calculate_arm_angle(point1, point2):
+    return math.floor(angle_with_y((point1.x - point2.x, point1.y - point2.y)))
+
+def calculate_octant(angle):
+    return int((angle +202.5) / 45) % 8
+
 def extract_angles_from_poses(result: PoseLandmarkerResult, output_image: mp.Image, timestamp_ms: int, event_emitter):
     age = current_milli_time() - timestamp_ms
     emit_data = {}
@@ -54,8 +62,8 @@ def extract_angles_from_poses(result: PoseLandmarkerResult, output_image: mp.Ima
 
     for person in result.pose_landmarks:
         if len(person) >= 16:
-            # Ref: https://github.com/geaxgx/openvino_blazepose/blob/main/BlazeposeOpenvino.py#L61
-            # Also https://github.com/geaxgx/openvino_blazepose/blob/main/BlazeposeOpenvino.py#L417
+            # What numbers are what points from the pose? From here:
+            # https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker#pose_landmarker_model
             right_arm_angle = math.floor(angle_with_y((person[14].x - person[12].x, person[14].y - person[12].y)))
             left_arm_angle = math.floor(angle_with_y((person[13].x - person[11].x, person[13].y - person[11].y)))
             right_pose = int((right_arm_angle +202.5) / 45) % 8
@@ -63,10 +71,16 @@ def extract_angles_from_poses(result: PoseLandmarkerResult, output_image: mp.Ima
             letter = semaphore_flag.get((right_pose, left_pose), None)
 
             person_emit_data = {}
-            person_emit_data['right_arm_angle'] = right_arm_angle
-            person_emit_data['left_arm_angle'] = left_arm_angle
-            person_emit_data['right_pose_octant'] = right_pose
-            person_emit_data['left_pose_octant'] = left_pose
+            person_emit_data['right_arm_upper_angle'] = calculate_arm_angle(person[14], person[12])
+            person_emit_data['left_arm_upper_angle'] = calculate_arm_angle(person[13], person[11])
+            person_emit_data['right_arm_upper_octant'] = calculate_octant(person_emit_data['right_arm_upper_angle'])
+            person_emit_data['left_arm_upper_octant'] = calculate_octant(person_emit_data['left_arm_upper_angle'])
+
+            person_emit_data['right_arm_whole_angle'] = calculate_arm_angle(person[16], person[12])
+            person_emit_data['left_arm_whole_angle'] = calculate_arm_angle(person[15], person[11])
+            person_emit_data['right_arm_whole_octant'] = calculate_octant(person_emit_data['right_arm_whole_angle'])
+            person_emit_data['left_arm_whole_octant'] = calculate_octant(person_emit_data['left_arm_whole_angle'])
+
             person_emit_data['semaphore_letter'] = letter
 
             persons.append(person_emit_data)

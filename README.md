@@ -31,3 +31,11 @@ Grab the model that matches what you had in mind. I used "Pose Landmarker (Full)
 Copy over the environment file and adjust it (for running locally):
 
 TODO: Complete documentation.
+
+
+TODO:
+* Frame sample count - make configurable
+* Some way to load the expressions from file
+* Connect to HA
+* Auto download models
+* Containerize
