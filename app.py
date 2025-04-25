@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 import base64
 
-import landmarker
+import posedetector
 
 # Fire up the landmarker and event emitter.
 event_emitter = EventEmitter()
@@ -29,8 +29,8 @@ event_emitter = EventEmitter()
 async def lifespan(app: FastAPI):
     # Load the ML model
     print("Starting LM thread...")
-    lm_thread = threading.Thread(target=landmarker.thread_run_pose_detector, args=(event_emitter, os.getenv('CAMERA'), os.getenv('MODELFILE')))
-    lm_thread.start()
+    pose_thread = threading.Thread(target=posedetector.thread_run_pose_detector, args=(event_emitter, os.getenv('CAMERA'), os.getenv('MODELFILE')))
+    pose_thread.start()
     print("LM Thread running, yiedling back.")
     yield
     # Clean up the ML models and release the resources
