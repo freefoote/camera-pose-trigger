@@ -29,7 +29,7 @@ event_emitter = EventEmitter()
 async def lifespan(app: FastAPI):
     # Load the ML model
     print("Starting LM thread...")
-    pose_thread = threading.Thread(target=posedetector.thread_run_pose_detector, args=(event_emitter, os.getenv('CAMERA'), os.getenv('MODELFILE')))
+    pose_thread = threading.Thread(target=posedetector.thread_run_pose_detector, args=(event_emitter, os.getenv('CAMERA'), os.getenv('POSE_MODEL_FILE')))
     pose_thread.start()
     print("LM Thread running, yiedling back.")
     yield

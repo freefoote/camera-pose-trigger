@@ -165,6 +165,6 @@ if __name__ == "__main__":
     def lm_ann_frame(frame):
         cv2.imwrite('out.jpg', frame)
 
-    x = threading.Thread(target=thread_run_pose_detector, args=(ee, os.getenv('CAMERA'), os.getenv('MODELFILE')))
+    x = threading.Thread(target=thread_run_pose_detector, args=(ee, os.getenv('CAMERA'), os.getenv('POSE_MODEL_FILE')))
     logging.info("Starting capture thread...")
     x.start()
