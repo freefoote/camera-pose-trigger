@@ -6,12 +6,13 @@ import logging
 import threading
 import time
 import os
+import asyncio
+import json
 
 from pyee.base import EventEmitter
 
 from fastapi import FastAPI, WebSocket, Response
 from contextlib import asynccontextmanager
-from nicegui import app as ngapp, ui, run
 
 import cv2
 import numpy as np
@@ -37,33 +38,27 @@ async def lifespan(app: FastAPI):
 # Set up FastAPI
 app = FastAPI(lifespan=lifespan)
 
-# The encoded frame to send back to the client.
-black_1px = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBg+A8AAQQBAHAgZQsAAAAASUVORK5CYII='
-current_frame_encoded_as_response = [None]
-current_frame_encoded_as_response[0] = Response(content=base64.b64decode(black_1px.encode('ascii')), media_type='image/png')
+def convert_image_to_base64(frame: np.ndarray) -> bytes:
+    _, encoded_image = cv2.imencode('.jpg', frame)
+    image_bytes = encoded_image.tobytes()
+    image_string = 'data:image/jpeg;base64,' + base64.b64encode(image_bytes).decode('utf-8')
+    return image_string
 
-def convert(frame: np.ndarray) -> bytes:
-    _, imencode_image = cv2.imencode('.jpg', frame)
-    return imencode_image.tobytes()
+@app.get('/')
+async def root() -> Response:
+    with open('frontend.html', 'r') as file:
+        return Response(content=file.read(), media_type="text/html")
 
-@event_emitter.on('annotated_frame')
-def lm_ann_frame(frame):
-    # Encode the image to a memory buffer
-    jpeg = convert(frame)
-    current_frame_encoded_as_response[0] = Response(content=jpeg, media_type='image/jpeg')
-
-@app.get('/video/frame')
-async def grab_video_frame() -> Response:
-    return current_frame_encoded_as_response[0]
-
-@ui.page('/')
-def show():
-    ui.markdown('# Pose Trigger')
-
-    with ui.card().tight():
-        video_image = ui.interactive_image().classes('w-full h-full')
-        ui.timer(interval=0.2, callback=lambda: video_image.set_source(f'/video/frame?{time.time()}'))
-        with ui.card_section():
-            ui.label('Lorem ipsum dolor sit amet, consectetur adipiscing elit, ...')
-
-ui.run_with(app)
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    @event_emitter.on('annotated_frame')
+    def lm_ann_frame(frame):
+        image_string = convert_image_to_base64(frame)
+        asyncio.run(websocket.send_text('image:' + image_string))
+    @event_emitter.on('landmarker_result')
+    def lm_ann_frame(meta):
+        asyncio.run(websocket.send_text('raw:' + json.dumps(meta)))
+    while True:
+        data = await websocket.receive_text()
+        print("Got from websocket:", data)

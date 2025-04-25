@@ -47,25 +47,31 @@ semaphore_flag = {
 def extract_angles_from_poses(result: PoseLandmarkerResult, output_image: mp.Image, timestamp_ms: int, event_emitter):
     age = current_milli_time() - timestamp_ms
     emit_data = {}
-    emit_data['persons'] = len(result.pose_landmarks)
-    emit_data['time_to_infer'] = age
+    emit_data['seen_people'] = len(result.pose_landmarks)
+    emit_data['time_to_infer_ms'] = age
 
-    if len(result.pose_landmarks) == 1:
-        vone = result.pose_landmarks[0]
-        if len(vone) >= 16:
+    persons = []
+
+    for person in result.pose_landmarks:
+        if len(person) >= 16:
             # Ref: https://github.com/geaxgx/openvino_blazepose/blob/main/BlazeposeOpenvino.py#L61
             # Also https://github.com/geaxgx/openvino_blazepose/blob/main/BlazeposeOpenvino.py#L417
-            right_arm_angle = angle_with_y((vone[14].x - vone[12].x, vone[14].y - vone[12].y))
-            left_arm_angle = angle_with_y((vone[13].x - vone[11].x, vone[13].y - vone[11].y))
+            right_arm_angle = math.floor(angle_with_y((person[14].x - person[12].x, person[14].y - person[12].y)))
+            left_arm_angle = math.floor(angle_with_y((person[13].x - person[11].x, person[13].y - person[11].y)))
             right_pose = int((right_arm_angle +202.5) / 45) % 8
             left_pose = int((left_arm_angle +202.5) / 45) % 8
             letter = semaphore_flag.get((right_pose, left_pose), None)
 
-            emit_data['right_arm_angle'] = right_arm_angle
-            emit_data['left_arm_angle'] = left_arm_angle
-            emit_data['right_pose'] = right_pose
-            emit_data['left_pose'] = left_pose
-            emit_data['letter'] = letter
+            person_emit_data = {}
+            person_emit_data['right_arm_angle'] = right_arm_angle
+            person_emit_data['left_arm_angle'] = left_arm_angle
+            person_emit_data['right_pose_octant'] = right_pose
+            person_emit_data['left_pose_octant'] = left_pose
+            person_emit_data['semaphore_letter'] = letter
+
+            persons.append(person_emit_data)
+
+    emit_data['persons'] = persons
 
     event_emitter.emit('landmarker_result', emit_data)
 

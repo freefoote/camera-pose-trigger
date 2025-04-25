@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Camera Pose Trigger</title>
+    <link rel="stylesheet" href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" />
+</head>
+
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <nav id="header" class="fixed w-full z-10 top-0">
+        <div class="w-full md:max-w-4xl mx-auto flex flex-wrap items-center justify-between mt-0 py-3">
+
+            <div class="pl-4">
+                <a class="text-gray-900 text-base no-underline hover:no-underline font-extrabold text-xl" href="#">
+                    Camera Pose Trigger
+                </a>
+            </div>
+
+            <div class="w-full flex-grow lg:flex lg:items-center lg:w-auto hidden lg:block mt-2 lg:mt-0 bg-gray-100 md:bg-transparent z-20"
+                id="nav-content">
+                <!-- <ul class="list-reset lg:flex justify-end flex-1 items-center">
+                    <li class="mr-3">
+                        <a class="inline-block py-2 px-4 text-gray-900 font-bold no-underline" href="#">Active</a>
+                    </li>
+                    <li class="mr-3">
+                        <a class="inline-block text-gray-600 no-underline hover:text-gray-900 hover:text-underline py-2 px-4"
+                            href="#">link</a>
+                    </li>
+                    <li class="mr-3">
+                        <a class="inline-block text-gray-600 no-underline hover:text-gray-900 hover:text-underline py-2 px-4"
+                            href="#">link</a>
+                    </li>
+                </ul> -->
+            </div>
+        </div>
+    </nav>
+
+    <!--Container-->
+    <div class="container w-full md:max-w-3xl mx-auto pt-20">
+        <div class="w-full px-4 md:px-6 text-xl text-gray-800 leading-normal" style="font-family:Georgia,serif;">
+
+            <img src="https://placehold.co/600x400" id="preview" />
+
+            <div>Parsed match result</div>
+
+            <pre id="raw_result">Raw Match result</pre>
+
+        </div>
+    </div>
+    <!--/container-->
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const socket = new WebSocket("/ws");
+
+            // Connection opened
+            socket.addEventListener("open", (event) => {
+                console.log("Socket open.");
+            });
+
+            // Listen for messages
+            socket.addEventListener("message", (event) => {
+                var data = event.data;
+                if (data.startsWith('image:')) {
+                    // Update the image.
+                    document.getElementById('preview').setAttribute('src', data.substring(6));
+                }
+                if (data.startsWith('raw:')) {
+                    // Update the raw data.
+                    var parsed = JSON.parse(data.substring(4));
+                    document.getElementById('raw_result').innerText = JSON.stringify(parsed, null, 4);
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>
