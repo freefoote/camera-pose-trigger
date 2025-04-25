@@ -1,2 +1,5 @@
 mediapipe
 python-dotenv
+pyee
+fastapi[standard]
+nicegui

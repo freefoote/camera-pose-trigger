@@ -1,3 +1,5 @@
 /venv
 .env
 *.task
+*.jpg
+/__pycache__/
