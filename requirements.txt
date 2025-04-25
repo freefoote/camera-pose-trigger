@@ -2,3 +2,4 @@ mediapipe
 python-dotenv
 pyee
 fastapi[standard]
+simpleeval

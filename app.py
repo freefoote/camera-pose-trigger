@@ -14,6 +14,8 @@ from pyee.base import EventEmitter
 from fastapi import FastAPI, WebSocket, Response
 from contextlib import asynccontextmanager
 
+from simpleeval import SimpleEval
+
 import cv2
 import numpy as np
 import base64
@@ -52,13 +54,56 @@ async def root() -> Response:
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+
+    # TODO: This probably isn't thread safe...
     @event_emitter.on('annotated_frame')
     def lm_ann_frame(frame):
         image_string = convert_image_to_base64(frame)
         asyncio.run(websocket.send_text('image:' + image_string))
     @event_emitter.on('landmarker_result')
-    def lm_ann_frame(meta):
+    def lm_result(meta):
         asyncio.run(websocket.send_text('raw:' + json.dumps(meta)))
+
     while True:
         data = await websocket.receive_text()
         print("Got from websocket:", data)
+
+# Evaluate the result against the rules.
+rules = [
+    {
+        'name': 'Semaphore E',
+        'expression': "semaphore_letter == 'E'",
+        'event': 'pause'
+    },
+    {
+        'name': 'Both arms up',
+        'expression': "left_pose_octant == 0 and right_pose_octant == 0",
+        'event': 'pause'
+    },
+    {
+        'name': 'Both arms up (close enough)',
+        'expression': "(left_pose_octant == 0 and right_pose_octant == 1) or (left_pose_octant == 0 and right_pose_octant == 1)",
+        'event': 'pause'
+    },
+]
+
+evaluator = SimpleEval()
+parsed_rules = {}
+for rule in rules:
+    key = rule['name']
+    parsed = evaluator.parse(rule['expression'])
+    parsed_rules[key] = {
+        'parsed': parsed,
+        'expression': rule['expression']
+    }
+
+@event_emitter.on('landmarker_result')
+def lm_result(meta):
+    for person in meta['persons']:
+        # Check all rules against the person.
+        for rule_name in parsed_rules:
+            rule_data = parsed_rules[rule_name]
+            evaluator.names = person
+            result = evaluator.eval(rule_data['expression'], previously_parsed=rule_data['parsed'])
+            if result:
+                print("Expression", rule_name, "(", rule_data['expression'], ")", "matched.")

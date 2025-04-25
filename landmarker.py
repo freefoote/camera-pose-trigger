@@ -121,7 +121,7 @@ def thread_run_mediapipe(event_emitter, camera_url, modelfile):
                 logging.error("Failed to capture - aborting.")
                 break
 
-            if framecount % 5 == 0:
+            if framecount % 10 == 0:
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
                 frame_timestamp_ms = current_milli_time()
                 pose_landmarker_result = landmarker.detect_for_video(mp_image, frame_timestamp_ms)
