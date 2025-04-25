@@ -29,13 +29,13 @@ event_emitter = EventEmitter()
 async def lifespan(app: FastAPI):
     # Load the ML model
     print("Starting LM thread...")
-    lm_thread = threading.Thread(target=landmarker.thread_run_mediapipe, args=(event_emitter, os.getenv('CAMERA'), os.getenv('MODELFILE')))
+    lm_thread = threading.Thread(target=landmarker.thread_run_pose_detector, args=(event_emitter, os.getenv('CAMERA'), os.getenv('MODELFILE')))
     lm_thread.start()
     print("LM Thread running, yiedling back.")
     yield
     # Clean up the ML models and release the resources
     print("Lifecycle complete. Closing thread.")
-    event_emitter.emit('kill_lm_thread')
+    event_emitter.emit('pose_kill_thread')
 
 # Set up FastAPI
 app = FastAPI(lifespan=lifespan)
@@ -56,11 +56,11 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
     # TODO: This probably isn't thread safe...
-    @event_emitter.on('annotated_frame')
+    @event_emitter.on('pose_annotated_frame')
     def lm_ann_frame(frame):
         image_string = convert_image_to_base64(frame)
         asyncio.run(websocket.send_text('image:' + image_string))
-    @event_emitter.on('landmarker_result')
+    @event_emitter.on('pose_result')
     def lm_result(meta):
         asyncio.run(websocket.send_text('raw:' + json.dumps(meta)))
 
@@ -92,7 +92,7 @@ for rule in rules:
         'expression': rule['expression']
     }
 
-@event_emitter.on('landmarker_result')
+@event_emitter.on('pose_result')
 def lm_result(meta):
     for person in meta['persons']:
         # Check all rules against the person.

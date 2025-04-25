@@ -87,7 +87,7 @@ def extract_angles_from_poses(result: PoseLandmarkerResult, output_image: mp.Ima
 
     emit_data['persons'] = persons
 
-    event_emitter.emit('landmarker_result', emit_data)
+    event_emitter.emit('pose_result', emit_data)
 
 # Ref: https://github.com/google-ai-edge/mediapipe-samples/blob/main/examples/pose_landmarker/python/%5BMediaPipe_Python_Tasks%5D_Pose_Landmarker.ipynb
 def draw_landmarks_on_image(rgb_image, detection_result):
@@ -111,7 +111,7 @@ def draw_landmarks_on_image(rgb_image, detection_result):
 
     return annotated_image
 
-def thread_run_mediapipe(event_emitter, camera_url, modelfile):
+def thread_run_pose_detector(event_emitter, camera_url, modelfile):
     options = PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=modelfile),
         running_mode=VisionRunningMode.VIDEO)
@@ -124,7 +124,7 @@ def thread_run_mediapipe(event_emitter, camera_url, modelfile):
         logging.info("Capture has been opened.")
         keep_capturing = True
 
-        @event_emitter.on('kill_lm_thread')
+        @event_emitter.on('pose_kill_thread')
         def kill_lm_thread():
             # Whee! Thread safety non existent!
             keep_capturing = False
@@ -143,7 +143,7 @@ def thread_run_mediapipe(event_emitter, camera_url, modelfile):
                 annotated_image = draw_landmarks_on_image(mp_image.numpy_view(), pose_landmarker_result)
 
                 event_emitter.emit('raw_frame', mp_image)
-                event_emitter.emit('annotated_frame', annotated_image)
+                event_emitter.emit('pose_annotated_frame', annotated_image)
 
             framecount += 1
 
@@ -157,14 +157,14 @@ if __name__ == "__main__":
 
     ee = EventEmitter()
 
-    @ee.on('landmarker_result')
+    @ee.on('pose_result')
     def lm_result_simple(foo):
         print(foo)
 
-    @ee.on('annotated_frame')
+    @ee.on('pose_annotated_frame')
     def lm_ann_frame(frame):
         cv2.imwrite('out.jpg', frame)
 
-    x = threading.Thread(target=thread_run_mediapipe, args=(ee, os.getenv('CAMERA'), os.getenv('MODELFILE')))
+    x = threading.Thread(target=thread_run_pose_detector, args=(ee, os.getenv('CAMERA'), os.getenv('MODELFILE')))
     logging.info("Starting capture thread...")
     x.start()
