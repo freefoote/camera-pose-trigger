@@ -110,7 +110,7 @@ def extract_angles_from_poses(result: PoseLandmarkerResult, output_image: mp.Ima
 
     emit_data['persons'] = persons
 
-    helpers.subprocess_emit('pose_result', json.dumps(emit_data))
+    helpers.subprocess_emit('pose_result', emit_data)
 
 # Ref: https://github.com/google-ai-edge/mediapipe-samples/blob/main/examples/pose_landmarker/python/%5BMediaPipe_Python_Tasks%5D_Pose_Landmarker.ipynb
 def draw_landmarks_on_image(rgb_image, detection_result):

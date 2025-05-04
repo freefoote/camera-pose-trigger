@@ -2,6 +2,7 @@
 import logging
 import time
 import base64
+import json
 
 # Third party libraries.
 import numpy
@@ -13,7 +14,7 @@ def default_logging_config():
 
 def subprocess_emit(message_type, content):
     payload = { 'message_type': message_type, 'content': content }
-    print(json.dumps(paylod), flush=True)
+    print(json.dumps(payload), flush=True)
 
 def current_milli_time():
     return round(time.time() * 1000)
