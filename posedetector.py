@@ -164,7 +164,7 @@ def run_pose_detector():
                 annotated_image = draw_landmarks_on_image(mp_image.numpy_view(), pose_landmarker_result)
 
                 # helpers.subprocess_emit('raw_frame', helpers.convert_image_to_base64(frame))
-                # helpers.subprocess_emit('pose_annotated_frame', helpers.convert_image_to_base64(annotated_image))
+                helpers.subprocess_emit('pose_annotated_frame', helpers.convert_image_to_base64(annotated_image))
 
             framecount += 1
 

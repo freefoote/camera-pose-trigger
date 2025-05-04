@@ -54,25 +54,18 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const socket = new WebSocket("/ws");
+            var es = new EventSource('/stream');
 
-            // Connection opened
-            socket.addEventListener("open", (event) => {
-                console.log("Socket open.");
+            es.addEventListener('pose_annotated_frame', function (event) {
+                // TODO: Work out where the double encoding is coming from.
+                const parsed = JSON.parse(event.data);
+                document.getElementById('preview').setAttribute('src', parsed);
             });
 
-            // Listen for messages
-            socket.addEventListener("message", (event) => {
-                var data = event.data;
-                if (data.startsWith('image:')) {
-                    // Update the image.
-                    document.getElementById('preview').setAttribute('src', data.substring(6));
-                }
-                if (data.startsWith('raw:')) {
-                    // Update the raw data.
-                    var parsed = JSON.parse(data.substring(4));
-                    document.getElementById('raw_result').innerText = JSON.stringify(parsed, null, 4);
-                }
+            es.addEventListener('pose_result', function (event) {
+                console.log('pose_result', event);
+                const parsed = JSON.parse(event.data);
+                document.getElementById('raw_result').innerText = JSON.stringify(parsed, null, 4);
             });
         });
     </script>

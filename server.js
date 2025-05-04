@@ -1,6 +1,9 @@
 const express = require('express');
 const { spawn } = require('child_process');
 const readline = require('node:readline');
+const SSE = require('express-sse');
+
+var serverSentEvents = new SSE();
 
 async function startPoseDetectorProcess() {
     const subprocess = spawn(
@@ -27,7 +30,9 @@ async function startPoseDetectorProcess() {
     });
 
     rl.on('line', (line) => {
-        console.log(`Line from subprocess: ${line}`);
+        // console.log(`Line from subprocess: ${line}`);
+        const decoded = JSON.parse(line);
+        serverSentEvents.send(decoded.content, decoded.message_type);
     });
 
     // Handle errors while reading lines
@@ -53,6 +58,8 @@ async function startPoseDetectorProcess() {
 
 const app = express();
 const port = 3000;
+
+app.get('/stream', serverSentEvents.init);
 
 app.get('/foo', (req, res) => {
     res.send('Hello World!')
