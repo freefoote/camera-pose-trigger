@@ -1,8 +1,2 @@
 mediapipe
 python-dotenv
-pyee
-fastapi[standard]
-simpleeval
-ha-mqtt-discoverable
-python-slugify
-pyzmq
