@@ -12,14 +12,8 @@ def default_logging_config():
     logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
 def subprocess_emit(message_type, content):
-    # A super simple microformat.
-    print(message_type, content, sep=':', flush=True)
-
-def parse_subprocess_emit(raw):
-    prefix = raw[:raw.find(':')]
-    data = raw[len(prefix):]
-
-    print(prefix, data)
+    payload = { 'message_type': message_type, 'content': content }
+    print(json.dumps(paylod), flush=True)
 
 def current_milli_time():
     return round(time.time() * 1000)
