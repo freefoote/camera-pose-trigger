@@ -5,3 +5,4 @@ fastapi[standard]
 simpleeval
 ha-mqtt-discoverable
 python-slugify
+pyzmq
