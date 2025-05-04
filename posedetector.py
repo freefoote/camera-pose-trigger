@@ -114,7 +114,8 @@ def draw_landmarks_on_image(rgb_image, detection_result):
 def thread_run_pose_detector(event_emitter, camera_url, modelfile):
     options = PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=modelfile),
-        running_mode=VisionRunningMode.VIDEO)
+        running_mode=VisionRunningMode.VIDEO,
+        num_poses=4)
 
     with PoseLandmarker.create_from_options(options) as landmarker:
         # The landmarker is initialized. Use it here.

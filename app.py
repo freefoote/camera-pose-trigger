@@ -24,7 +24,7 @@ import urllib
 import posedetector
 
 from ha_mqtt_discoverable import Settings, DeviceInfo
-from ha_mqtt_discoverable.sensors import BinarySensor, BinarySensorInfo
+from ha_mqtt_discoverable.sensors import DeviceInfo, DeviceTriggerInfo, DeviceTrigger
 from slugify import slugify
 
 def configured_slugify(input):
@@ -99,37 +99,35 @@ for rule in rules:
     key = rule['name']
     parsed = evaluator.parse(rule['expression'])
 
-    motion_sensor_info = BinarySensorInfo(name=rule['name'], device_class='motion', unique_id=configured_slugify(rule['name']), device=ha_device_info)
-    motion_settings = Settings(mqtt=mqtt_settings, entity=motion_sensor_info)
-    motion_sensor = BinarySensor(motion_settings)
+    trigger_info = DeviceTriggerInfo(name=rule['name'], type="button_press", subtype=configured_slugify(rule['name']), unique_id=configured_slugify(rule['name']), device=ha_device_info)
+    trigger_settings = Settings(mqtt=mqtt_settings, entity=trigger_info)
+    trigger = DeviceTrigger(trigger_settings)
 
     parsed_rules[key] = {
         'parsed': parsed,
         'expression': rule['expression'],
-        'ha_sensor': motion_sensor,
+        'ha_trigger': trigger,
         'last_value': None
     }
 
 @event_emitter.on('pose_result')
 def lm_result(meta):
-    for person in meta['persons']:
-        # Check all rules against the person.
-        for rule_name in parsed_rules:
-            rule_data = parsed_rules[rule_name]
+    # Check all rules...
+    for rule_name in parsed_rules:
+        rule_data = parsed_rules[rule_name]
+
+        # Against each person...
+        overall_result = None
+        for person in meta['persons']:
             evaluator.names = person
             result = evaluator.eval(rule_data['expression'], previously_parsed=rule_data['parsed'])
 
-            def publish_result():
-                if result:
-                    print("Expression", rule_name, "(", rule_data['expression'], ")", "matched.")
-                    rule_data['ha_sensor'].on()
-                else:
-                    rule_data['ha_sensor'].off()
-                rule_data['last_value'] = result
+            if result:
+                overall_result = True
 
-            if rule_data['last_value'] is None:
-                # First time it's been seen. Always publish it.
-                publish_result()
-            elif rule_data['last_value'] != result:
-                publish_result()
+        if overall_result and overall_result != rule_data['last_value']:
+            print("HA Trigger", rule_name)
+            rule_data['ha_trigger'].trigger(rule_name)
+
+        rule_data['last_value'] = overall_result
 
